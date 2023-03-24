@@ -2,12 +2,16 @@ use bevy::{prelude::*, window::PrimaryWindow};
 
 
 pub const PLAYER_SIZE: f32 = 64.0;
+pub const NUMBER_OF_ENEMIES: usize = 4;
+pub const PLAYER_SPEED : f32 = 500.0;
+
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_startup_system(spawn_player)
         .add_startup_system(spawn_camera)
+        .add_startup_system(spawn_enemies)
         .add_system(player_movement)
         .add_system(confine_player_movement)
         .run();
@@ -58,7 +62,6 @@ pub enum ShipType {
     Enemy5,
 }
 
-pub const PLAYER_SPEED : f32 = 500.0;
 
 pub fn player_movement(
     keyboard_input: Res<Input<KeyCode>>,
@@ -117,4 +120,36 @@ pub fn confine_player_movement(
             transform.translation.y = y_max;
         }
     }
+}
+
+pub fn spawn_enemies(
+    mut commands: Commands,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    asset_server: Res<AssetServer>,
+) {
+    let window = window_query.get_single().unwrap();
+
+    for _ in 0..NUMBER_OF_ENEMIES {
+        let random_x = rand::random::<f32>() * window.width();
+        let random_y = rand::random::<f32>() * window.height() / 2.0 + window.height() / 2.0;
+        let random_ship_type = rand::random::<u32>() % 5;
+        let enemy_texture = match random_ship_type {
+            0 => "enemy1.png",
+            1 => "enemy2.png",
+            2 => "enemy3.png",
+            3 => "enemy4.png",
+            4 => "enemy5.png",
+            _ => "sistem.png",
+        };
+
+        commands.spawn((
+            SpriteBundle {
+                transform: Transform::from_xyz(random_x, random_y, 0.0),
+                texture: asset_server.load(enemy_texture),
+                ..default()
+            },
+            Enemy { speed: 500.0 },
+        ));
+    }
+    
 }
