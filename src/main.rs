@@ -1,19 +1,21 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
-
 pub const PLAYER_SIZE: f32 = 64.0;
 pub const NUMBER_OF_ENEMIES: usize = 4;
-pub const PLAYER_SPEED : f32 = 500.0;
-
+pub const PLAYER_SPEED: f32 = 500.0;
+pub const ENEMY_SPEED: f32 = 300.0;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(bevy_framepace::FramepacePlugin)
         .add_startup_system(spawn_player)
         .add_startup_system(spawn_camera)
         .add_startup_system(spawn_enemies)
         .add_system(player_movement)
+        .add_system(enemy_movement)
         .add_system(confine_player_movement)
+        .add_system(respawn_enemies)
         .run();
 }
 
@@ -51,6 +53,7 @@ pub fn spawn_camera(mut commands: Commands, window_query: Query<&Window, With<Pr
 #[derive(Component)]
 pub struct Enemy {
     pub speed: f32,
+    pub direction: Vec2,
 }
 
 pub enum ShipType {
@@ -62,13 +65,12 @@ pub enum ShipType {
     Enemy5,
 }
 
-
 pub fn player_movement(
     keyboard_input: Res<Input<KeyCode>>,
     mut player_query: Query<&mut Transform, With<Player>>,
     time: Res<Time>,
 ) {
-    if let Ok(mut transform ) = player_query.get_single_mut() {
+    if let Ok(mut transform) = player_query.get_single_mut() {
         let mut direction = Vec3::ZERO;
 
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
@@ -94,6 +96,21 @@ pub fn player_movement(
         transform.translation += direction * PLAYER_SPEED * time.delta_seconds();
     }
 }
+
+pub fn enemy_movement(mut enemy_query: Query<(&mut Transform, &Enemy)>, time: Res<Time>) {
+    for (mut transform, enemy) in enemy_query.iter_mut() {
+        let direction = Vec3::new(enemy.direction.x, enemy.direction.y, 0.0);
+        transform.translation += direction * enemy.speed * time.delta_seconds();
+    }
+}
+
+pub fn respawn_enemies(mut enemy_query: Query<(&Transform, &Enemy)>, time: Res<Time>) {
+    // for (mut transform, enemy) in enemy_query.iter_mut() {
+    //     let direction = Vec3::new(enemy.direction.x, enemy.direction.y, 0.0);
+    //     transform.translation += direction * enemy.speed * time.delta_seconds();
+    // }
+}
+
 
 pub fn confine_player_movement(
     mut player_query: Query<&mut Transform, With<Player>>,
@@ -148,8 +165,10 @@ pub fn spawn_enemies(
                 texture: asset_server.load(enemy_texture),
                 ..default()
             },
-            Enemy { speed: 500.0 },
+            Enemy {
+                direction: Vec2::new(0.0, -1.0).normalize(),
+                speed: ENEMY_SPEED,
+            },
         ));
     }
-    
 }
