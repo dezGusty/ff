@@ -24,19 +24,33 @@ pub struct Player {
     pub speed: f32,
 }
 
+#[derive(Component)]
+pub struct AnimationIndices {
+    first: usize,
+    last: usize,
+}
+
 pub fn spawn_player(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let window = window_query.get_single().unwrap();
 
+    let texture_handle = asset_server.load("ship1.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(45.0, 45.0), 1, 3, None, None);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+
+    let animation_indices = AnimationIndices { first: 1, last: 3 };
     commands.spawn((
-        SpriteBundle {
+        SpriteSheetBundle  {
+            texture_atlas: texture_atlas_handle,
+            sprite: TextureAtlasSprite::new(animation_indices.first),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
-            texture: asset_server.load("sistem.png"),
             ..default()
         },
+        animation_indices,
         Player { speed: 500.0 },
     ));
 }
@@ -67,24 +81,27 @@ pub enum ShipType {
 
 pub fn player_movement(
     keyboard_input: Res<Input<KeyCode>>,
-    mut player_query: Query<&mut Transform, With<Player>>,
+    mut player_query: Query<(&mut Transform, With<Player>, &mut TextureAtlasSprite, &AnimationIndices)>,
     time: Res<Time>,
 ) {
     if let Ok(mut transform) = player_query.get_single_mut() {
         let mut direction = Vec3::ZERO;
+        transform.2.index = 0;
 
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
             direction += Vec3::new(-1.0, 0.0, 0.0);
+            transform.2.index = 2;
         }
-
+        
         if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
             direction += Vec3::new(1.0, 0.0, 0.0);
+            transform.2.index = 1;
         }
-
+        
         if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
             direction += Vec3::new(0.0, 1.0, 0.0);
         }
-
+        
         if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
             direction += Vec3::new(0.0, -1.0, 0.0);
         }
@@ -93,7 +110,7 @@ pub fn player_movement(
             direction = direction.normalize();
         }
 
-        transform.translation += direction * PLAYER_SPEED * time.delta_seconds();
+        transform.0.translation += direction * PLAYER_SPEED * time.delta_seconds();
     }
 }
 
