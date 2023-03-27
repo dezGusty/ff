@@ -39,12 +39,13 @@ pub fn spawn_player(
     let window = window_query.get_single().unwrap();
 
     let texture_handle = asset_server.load("ship1.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(45.0, 45.0), 1, 3, None, None);
+    let texture_atlas =
+        TextureAtlas::from_grid(texture_handle, Vec2::new(45.0, 45.0), 1, 3, None, None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     let animation_indices = AnimationIndices { first: 1, last: 3 };
     commands.spawn((
-        SpriteSheetBundle  {
+        SpriteSheetBundle {
             texture_atlas: texture_atlas_handle,
             sprite: TextureAtlasSprite::new(animation_indices.first),
             transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
@@ -81,7 +82,12 @@ pub enum ShipType {
 
 pub fn player_movement(
     keyboard_input: Res<Input<KeyCode>>,
-    mut player_query: Query<(&mut Transform, With<Player>, &mut TextureAtlasSprite, &AnimationIndices)>,
+    mut player_query: Query<(
+        &mut Transform,
+        With<Player>,
+        &mut TextureAtlasSprite,
+        &AnimationIndices,
+    )>,
     time: Res<Time>,
 ) {
     if let Ok(mut transform) = player_query.get_single_mut() {
@@ -92,16 +98,16 @@ pub fn player_movement(
             direction += Vec3::new(-1.0, 0.0, 0.0);
             transform.2.index = 2;
         }
-        
+
         if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
             direction += Vec3::new(1.0, 0.0, 0.0);
             transform.2.index = 1;
         }
-        
+
         if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
             direction += Vec3::new(0.0, 1.0, 0.0);
         }
-        
+
         if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
             direction += Vec3::new(0.0, -1.0, 0.0);
         }
@@ -121,13 +127,20 @@ pub fn enemy_movement(mut enemy_query: Query<(&mut Transform, &Enemy)>, time: Re
     }
 }
 
-pub fn respawn_enemies(mut enemy_query: Query<(&Transform, &Enemy)>, time: Res<Time>) {
-    // for (mut transform, enemy) in enemy_query.iter_mut() {
-    //     let direction = Vec3::new(enemy.direction.x, enemy.direction.y, 0.0);
-    //     transform.translation += direction * enemy.speed * time.delta_seconds();
-    // }
+pub fn respawn_enemies(
+    mut commands: Commands,
+    mut enemy_query: Query<(Entity, &Transform, &Enemy)>,
+    asset_server: Res<AssetServer>,
+    time: Res<Time>,
+) {
+    for enemy_transform in enemy_query.iter_mut() {
+        if enemy_transform.1.translation.y < 0.0 {
+            // enemy_transform.0.translation.y = 600.0;
+            println!("Enemy has reached the bottom of the screen");
+            commands.entity(enemy_transform.0).despawn();
+        }
+    }
 }
-
 
 pub fn confine_player_movement(
     mut player_query: Query<&mut Transform, With<Player>>,
